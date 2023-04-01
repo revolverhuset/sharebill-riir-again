@@ -1,0 +1,17 @@
+[package]
+name = "sharebill"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = "4.2.1"
+diesel = { version = "2.0.3", features = ["sqlite", "chrono", "returning_clauses_for_sqlite_3_35" ] }
+serde = "1.0.159"
+serde_derive = "1.0.159"
+serde_json = "1.0.95"
+chrono = "0.4.24"
+
+[dependencies.libsqlite3-sys]
+features = ["bundled"]
