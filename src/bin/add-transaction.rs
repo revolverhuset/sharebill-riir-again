@@ -20,17 +20,24 @@ fn main() {
             .get_result(conn)
             .expect("Error saving transaction");
 
-        let new_credit = NewCredit {
+        let new_credit = vec![NewCredit {
             tx_id: tx.id,
             account: "TBD",
             value: 5,
-        };
+        }];
 
-        let new_debit = NewDebit {
-            tx_id: tx.id,
-            account: "TBD",
-            value: 5,
-        };
+        let new_debit = vec![
+            NewDebit {
+                tx_id: tx.id,
+                account: "TBD",
+                value: 2,
+            },
+            NewDebit {
+                tx_id: tx.id,
+                account: "TLA",
+                value: 3,
+            },
+        ];
 
         diesel::insert_into(credits::table)
             .values(&new_credit)
