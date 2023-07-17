@@ -2,6 +2,7 @@ use diesel::prelude::*;
 use diesel::SqliteConnection;
 
 pub mod models;
+pub mod rational;
 pub mod schema;
 
 pub fn establish_connection() -> SqliteConnection {

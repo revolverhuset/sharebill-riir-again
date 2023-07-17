@@ -7,11 +7,12 @@ edition = "2021"
 
 [dependencies]
 clap = "4.2.1"
-diesel = { version = "2.0.3", features = ["sqlite", "chrono", "returning_clauses_for_sqlite_3_35" ] }
+diesel = { version = "2.1.0", features = ["sqlite", "chrono", "returning_clauses_for_sqlite_3_35" ] }
 serde = "1.0.159"
 serde_derive = "1.0.159"
 serde_json = "1.0.95"
 chrono = "0.4.24"
+num = "0.4.1"
 
 [dependencies.libsqlite3-sys]
 features = ["bundled"]
