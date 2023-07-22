@@ -34,11 +34,7 @@ impl std::fmt::Display for InvalidBlob {
     }
 }
 
-impl std::error::Error for InvalidBlob {
-    fn description(&self) -> &str {
-        "Invalid blob data in sqlite"
-    }
-}
+impl std::error::Error for InvalidBlob {}
 
 // Not (yet?) in the standard library.
 // From https://internals.rust-lang.org/t/slice-split-at-should-have-an-option-variant/17891
