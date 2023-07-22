@@ -26,15 +26,15 @@ impl ToSql<Binary, Sqlite> for Rational {
 }
 
 #[derive(Debug)]
-struct InvalidBlob;
+struct ParseError;
 
-impl std::fmt::Display for InvalidBlob {
+impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "invalid rational number")
     }
 }
 
-impl std::error::Error for InvalidBlob {}
+impl std::error::Error for ParseError {}
 
 // Not (yet?) in the standard library.
 // From https://internals.rust-lang.org/t/slice-split-at-should-have-an-option-variant/17891
@@ -52,16 +52,16 @@ impl FromSql<Binary, Sqlite> for Rational {
         let bytes = <*const [u8] as FromSql<Binary, Sqlite>>::from_sql(bytes)?;
         let bytes: &[u8] = unsafe { &*bytes };
 
-        let (header, values) = get_split_at(bytes, 4).ok_or(InvalidBlob)?;
+        let (header, values) = get_split_at(bytes, 4).ok_or(ParseError)?;
         let numer_len = u32::from_le_bytes(header.try_into().unwrap()) as usize;
 
-        let (numer, denom) = get_split_at(values, numer_len).ok_or(InvalidBlob)?;
+        let (numer, denom) = get_split_at(values, numer_len).ok_or(ParseError)?;
 
         let numer = BigUint::from_bytes_le(numer);
         let denom = BigUint::from_bytes_le(denom);
 
         if denom.is_zero() {
-            return Err(InvalidBlob.into());
+            return Err(ParseError.into());
         }
 
         Ok(Rational(Ratio::new(numer, denom)))
