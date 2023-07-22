@@ -55,7 +55,7 @@ impl FromSql<Binary, Sqlite> for Rational {
         let (header, values) = get_split_at(bytes, 4).ok_or(InvalidBlob)?;
         let numer_len = u32::from_le_bytes(header.try_into().unwrap()) as usize;
 
-        let (numer, denom) = get_split_at(values, numer_len).ok_or(InvalidBlob {})?;
+        let (numer, denom) = get_split_at(values, numer_len).ok_or(InvalidBlob)?;
 
         let numer = BigUint::from_bytes_le(numer);
         let denom = BigUint::from_bytes_le(denom);
