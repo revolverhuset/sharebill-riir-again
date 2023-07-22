@@ -30,7 +30,7 @@ struct InvalidBlob;
 
 impl std::fmt::Display for InvalidBlob {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Invalid blob data in sqlite")
+        write!(f, "invalid rational number")
     }
 }
 
