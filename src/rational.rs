@@ -61,7 +61,7 @@ impl FromSql<Binary, Sqlite> for Rational {
         let denom = BigUint::from_bytes_le(denom);
 
         if denom.is_zero() {
-            return Err(Box::new(InvalidBlob {}));
+            return Err(Box::new(InvalidBlob));
         }
 
         Ok(Rational(Ratio::new(numer, denom)))
