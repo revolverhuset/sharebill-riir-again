@@ -10,6 +10,24 @@ use num::{BigUint, Zero};
 #[diesel(sql_type = Binary)]
 pub struct Rational(Ratio<BigUint>);
 
+impl Rational {
+    pub fn new(numer: impl Into<BigUint>, denom: impl Into<BigUint>) -> Self {
+        Self(Ratio::new(numer.into(), denom.into()))
+    }
+}
+
+impl From<u32> for Rational {
+    fn from(value: u32) -> Self {
+        Self::new(value, 1u32)
+    }
+}
+
+impl std::fmt::Display for Rational {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 impl ToSql<Binary, Sqlite> for Rational {
     fn to_sql<'c>(&'c self, out: &mut Output<'c, '_, Sqlite>) -> serialize::Result {
         let numer = self.0.numer().to_bytes_le();

@@ -11,10 +11,13 @@ pub struct Tx {
 #[derive(Queryable)]
 pub struct TxItem {
     pub account: String,
-    pub value: i32,
+    pub value: Rational,
 }
 
-use crate::schema::{credits, debits, txs};
+use crate::{
+    rational::Rational,
+    schema::{credits, debits, txs},
+};
 
 #[derive(Insertable)]
 #[diesel(table_name = txs)]
@@ -29,7 +32,7 @@ pub struct NewTx<'a> {
 pub struct NewCredit<'a> {
     pub tx_id: i32,
     pub account: &'a str,
-    pub value: i32,
+    pub value: Rational,
 }
 
 #[derive(Insertable)]
@@ -37,5 +40,5 @@ pub struct NewCredit<'a> {
 pub struct NewDebit<'a> {
     pub tx_id: i32,
     pub account: &'a str,
-    pub value: i32,
+    pub value: Rational,
 }

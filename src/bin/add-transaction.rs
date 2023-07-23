@@ -1,6 +1,9 @@
 use diesel::prelude::*;
 use diesel::result::Error;
-use sharebill::models::{NewCredit, NewDebit, NewTx, Tx};
+use sharebill::{
+    models::{NewCredit, NewDebit, NewTx, Tx},
+    rational::Rational,
+};
 
 fn main() {
     let conn = &mut sharebill::establish_connection();
@@ -23,19 +26,19 @@ fn main() {
         let new_credit = vec![NewCredit {
             tx_id: tx.id,
             account: "TBD",
-            value: 5,
+            value: 5u32.into(),
         }];
 
         let new_debit = vec![
             NewDebit {
                 tx_id: tx.id,
                 account: "TBD",
-                value: 2,
+                value: Rational::new(5u32 * 2, 3u32),
             },
             NewDebit {
                 tx_id: tx.id,
                 account: "TLA",
-                value: 3,
+                value: Rational::new(5u32, 3u32),
             },
         ];
 
