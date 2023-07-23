@@ -1,0 +1,72 @@
+{
+    "total_rows": 1638,
+    "offset": 0,
+    "rows": [
+        {
+            "id": "965c2ee197831ccd131534d5b6a4e9fd",
+            "key": "2010-10-10T16:00:00Z",
+            "value": {
+                "_id": "965c2ee197831ccd131534d5b6a4e9fd",
+                "_rev": "8-c6c60b7986046754b2eb96509bd75582",
+                "transaction": {
+                    "credits": {
+                        "AAA": 115
+                    },
+                    "debets": {
+                        "BBB": 115
+                    }
+                },
+                "meta": {
+                    "timestamp": "2010-10-10T16:00:00Z",
+                    "description": "Thai away"
+                }
+            }
+        },
+        {
+            "id": "965c2ee197831ccd131534d5b6a4fd6a",
+            "key": "2010-10-14T16:00:00Z",
+            "value": {
+                "_id": "965c2ee197831ccd131534d5b6a4fd6a",
+                "_rev": "8-92856b96c9f4f61771bbfc42de1a90a1",
+                "transaction": {
+                    "credits": {
+                        "CCC": 359
+                    },
+                    "debets": {
+                        "BBB": 98,
+                        "AAA": 85,
+                        "DDD": 88,
+                        "EEE": 88
+                    }
+                },
+                "meta": {
+                    "timestamp": "2010-10-14T16:00:00Z",
+                    "description": "Hotwok"
+                }
+            }
+        },
+        {
+            "id": "965c2ee197831ccd131534d5b6a4fd6b",
+            "key": "2010-10-14T16:00:00Z",
+            "value": {
+                "_id": "965c2ee197831ccd131534d5b6a4fd6b",
+                "_rev": "8-92856b96c9f4f61771bbfc42de1a90a2",
+                "transaction": {
+                    "credits": {
+                        "AAA": "100"
+                    },
+                    "debets": {
+                        "BBB": "50 1/3",
+                        "AAA": "5/3",
+                        "DDD": "40",
+                        "EEE": "8"
+                    }
+                },
+                "meta": {
+                    "timestamp": "2010-10-14T16:00:00Z",
+                    "description": "Hotwok"
+                }
+            }
+        }
+    ]
+}
