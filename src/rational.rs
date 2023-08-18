@@ -6,7 +6,7 @@ use diesel::{AsExpression, FromSqlRow};
 use num::rational::Ratio;
 use num::{BigUint, Zero};
 
-#[derive(PartialEq, Eq, Debug, AsExpression, FromSqlRow, Clone)]
+#[derive(Default, PartialEq, Eq, Debug, AsExpression, FromSqlRow, Clone)]
 #[diesel(sql_type = Binary)]
 pub struct Rational(Ratio<BigUint>);
 
@@ -29,6 +29,12 @@ impl std::ops::Add for Rational {
 
     fn add(self, rhs: Rational) -> Self::Output {
         Rational(self.0 + rhs.0)
+    }
+}
+
+impl std::ops::AddAssign for Rational {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0;
     }
 }
 

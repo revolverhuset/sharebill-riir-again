@@ -191,7 +191,7 @@ fn main() {
     println!("{docs:?}");
 
     // 3. Shove it into the database
-    let conn = &mut sharebill::establish_connection();
+    let conn = &mut sharebill::establish_connection("test.db");
 
     conn.transaction::<_, Error, _>(|conn| {
         use sharebill::schema::{credits, debits, txs};

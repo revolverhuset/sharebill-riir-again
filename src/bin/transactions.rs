@@ -2,7 +2,7 @@ use diesel::prelude::*;
 use sharebill::schema::{credits, debits, txs};
 
 fn main() {
-    let conn = &mut sharebill::establish_connection();
+    let conn = &mut sharebill::establish_connection("test.db");
 
     let results = txs::table
         .load::<sharebill::models::Tx>(conn)

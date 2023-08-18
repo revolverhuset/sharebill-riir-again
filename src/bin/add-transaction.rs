@@ -6,7 +6,7 @@ use sharebill::{
 };
 
 fn main() {
-    let conn = &mut sharebill::establish_connection();
+    let conn = &mut sharebill::establish_connection("test.db");
 
     let now = chrono::Utc::now().naive_utc();
     let new_tx = NewTx {
