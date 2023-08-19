@@ -61,7 +61,7 @@ mod test {
             value: Rational,
         }
 
-        let res = sql_query("SELECT sum_rat(x) as value FROM (SELECT ? as x UNION SELECT ? as x)")
+        let res = sql_query("WITH t(x) AS (VALUES (?),(?)) SELECT sum_rat(x) as value FROM t")
             .bind::<Binary, _>(Rational::new(3u32, 14u32))
             .bind::<Binary, _>(Rational::new(2u32, 14u32))
             .load::<Row>(&mut conn)
