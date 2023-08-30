@@ -1,7 +1,8 @@
 use diesel::deserialize::{self, FromSql};
+use diesel::prelude::*;
 use diesel::serialize::{self, Output, ToSql};
 use diesel::sql_types::Binary;
-use diesel::sqlite::{Sqlite, SqliteValue};
+use diesel::sqlite::{Sqlite, SqliteAggregateFunction, SqliteValue};
 use diesel::{AsExpression, FromSqlRow};
 use num::rational::Ratio;
 use num::{BigUint, Zero};
@@ -9,6 +10,28 @@ use num::{BigUint, Zero};
 #[derive(Default, PartialEq, Eq, Debug, AsExpression, FromSqlRow, Clone)]
 #[diesel(sql_type = Binary)]
 pub struct Rational(Ratio<BigUint>);
+
+sql_function! {
+    #[aggregate]
+    fn sum_rat(x: Binary) -> Binary;
+}
+
+#[derive(Default)]
+pub struct SumRat {
+    sum: Rational,
+}
+
+impl SqliteAggregateFunction<Rational> for SumRat {
+    type Output = Rational;
+
+    fn step(&mut self, expr: Rational) {
+        self.sum += expr;
+    }
+
+    fn finalize(aggregator: Option<Self>) -> Self::Output {
+        aggregator.map(|a| a.sum).unwrap_or_default()
+    }
+}
 
 impl Rational {
     pub fn new(numer: impl Into<BigUint>, denom: impl Into<BigUint>) -> Self {
@@ -182,6 +205,33 @@ mod test {
         // 1/1 with trailing zeroes (i.e. leading in big endian, so not contributing any value)
         let res = sql_query("SELECT X'020000000100010000' as value").load::<Row>(&mut conn);
         assert!(res.is_ok());
+
+        Ok(())
+    }
+
+    #[test]
+    fn sum_rat() -> Result<(), Box<dyn Error>> {
+        let mut conn = SqliteConnection::establish(":memory:")?;
+        sum_rat::register_impl::<SumRat, _>(&mut conn).unwrap();
+
+        #[derive(QueryableByName, PartialEq, Eq, Debug)]
+        struct Row {
+            #[diesel(sql_type = Binary)]
+            value: Rational,
+        }
+
+        let res = sql_query("WITH t(x) AS (VALUES (?),(?)) SELECT sum_rat(x) as value FROM t")
+            .bind::<Binary, _>(Rational::new(3u32, 14u32))
+            .bind::<Binary, _>(Rational::new(2u32, 14u32))
+            .load::<Row>(&mut conn)
+            .unwrap();
+
+        assert_eq!(
+            &[Row {
+                value: Rational::new(5u32, 14u32)
+            }],
+            res.as_slice()
+        );
 
         Ok(())
     }

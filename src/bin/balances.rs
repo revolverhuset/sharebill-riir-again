@@ -3,9 +3,8 @@ use std::collections::HashMap;
 use diesel::prelude::*;
 use num::{BigInt, ToPrimitive, Zero};
 use sharebill::{
-    rational::Rational,
+    rational::{sum_rat, Rational},
     schema::{credits, debits},
-    sum_rat,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
