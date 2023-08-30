@@ -14,6 +14,10 @@ impl Rational {
     pub fn new(numer: impl Into<BigUint>, denom: impl Into<BigUint>) -> Self {
         Self(Ratio::new(numer.into(), denom.into()))
     }
+
+    pub fn into_inner(self) -> Ratio<BigUint> {
+        self.0
+    }
 }
 
 impl std::str::FromStr for Rational {
