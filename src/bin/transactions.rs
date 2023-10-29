@@ -5,11 +5,13 @@ fn main() {
     let conn = &mut sharebill::establish_connection("test.db");
 
     let results = txs::table
+        .order(txs::tx_time.desc())
+        .limit(10)
         .load::<sharebill::models::Tx>(conn)
         .expect("Error loading transactions");
 
     println!("Displaying {} transactions", results.len());
-    for tx in results {
+    for tx in results.iter().rev() {
         let tx_time = chrono::DateTime::<chrono::Utc>::from_utc(tx.tx_time, chrono::Utc);
         println!("{} : {}", tx_time.to_rfc3339(), tx.description);
 

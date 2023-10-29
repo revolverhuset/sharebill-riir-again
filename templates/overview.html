@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+
+<head>
+    <title>Sharebill</title>
+    <meta charset="utf8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="assets/all.css" type="text/css">
+</head>
+
+<body>
+    <h1>Sharebill</h1>
+    <ul class="breadcrumbs">
+        <li><a href="">Overview</a></li>
+    </ul>
+    <div class="section">
+        <h2>Balances</h2>
+        <div id="balances">
+            <table class="accounts">
+                <thead>
+                    <tr>
+                        <th>Account</th>
+                        <th>Debit</th>
+                        <th>Credit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for account in balances %}
+                    <tr class="accounts">
+                        <td><a href="account/{{ account.account }}">{{ account.account }}</a></td>
+                        <td class="debits currency">{% if account.balance < 0 %}{{ -account.balance }}{% endif %}</td>
+                        <td class="credits currency">{% if account.balance > 0 %}{{ account.balance }}{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="section">
+        <h2>Activity</h2>
+        <div id="recent" class="too_wide">
+            <table class="accounts">
+                <thead>
+                    <tr>
+                        <th rowspan="2">When</th>
+                        <th rowspan="2">What</th>
+                        <th colspan="{{ transactions.debit_accounts.len() }}" class="user_super_header">Debit</th>
+                        <th colspan="{{ transactions.credit_accounts.len() }}" class="user_super_header">Credit</th>
+                    </tr>
+                    <tr>
+                        {% for account in transactions.debit_accounts %}
+                        <th>{{ account }}</th>
+                        {% endfor %}
+                        {% for account in transactions.credit_accounts %}
+                        <th>{{ account }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions.transactions %}
+                    <tr>
+                        <td title="{{ t.when }}" class="date">
+                            <div>{{ t.when }}</div>
+                        </td>
+                        <td>
+                            <div><a href="post/{{ t.id }}">{{ t.what }}</a></div>
+                        </td>
+                        {% for value in t.debits %}
+                        <td class="debits currency">
+                            <div>
+                                {% if value.is_some() %}{{ value.unwrap() }}{% endif %}
+                            </div>
+                        </td>
+                        {% endfor %}
+                        {% for value in t.credits %}
+                        <td class="credits currency">
+                            <div>
+                                {% if value.is_some() %}{{ value.unwrap() }}{% endif %}
+                            </div>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div id="entry-buttons">
+            <!--<button class="entry_link btn" data-type="single_payer">I paid an expense</button>-->
+            <!--<button class="entry_link btn" data-type="freeform">Add a post</button>-->
+        </div>
+    </div>
+    <div class="footer">
+        <ul>
+            <li>Sharebill</li>
+            <li><a href="https://github.com/revolverhuset/sharebill-riir-again/">Source code</a></li>
+            <li><a href="https://github.com/revolverhuset/sharebill-riir-again/issues">Report an issue</a></li>
+        </ul>
+    </div>
+</body>

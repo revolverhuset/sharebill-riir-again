@@ -16,6 +16,11 @@ num = "0.4.1"
 regex = "1.9.1"
 diesel_migrations = "2.1.0"
 actix-web = "4.4.0"
+askama = "0.12.1"
+askama_actix = "0.14.0"
+actix-files = "0.6.2"
+chrono-humanize = "0.2.3"
+futures = "0.3.29"
 
 [dependencies.libsqlite3-sys]
 features = ["bundled"]
