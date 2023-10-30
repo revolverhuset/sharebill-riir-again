@@ -49,6 +49,8 @@ struct PostTemplate {
     what: String,
     debits: Vec<(String, Rational)>,
     credits: Vec<(String, Rational)>,
+    sum_debits: Rational,
+    sum_credits: Rational,
 }
 
 async fn overview(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> {
@@ -243,7 +245,7 @@ async fn post(id: web::Path<i32>, pool: web::Data<DbPool>) -> actix_web::Result<
         move || -> Result<_, Box<dyn std::error::Error + Send + Sync + 'static>> {
             let mut conn = pool1.get().expect("couldn't get db connection from pool");
 
-            let debits = debits::table
+            let debits: Vec<(String, Rational)> = debits::table
                 .select((debits::account, debits::value))
                 .filter(debits::tx_id.eq(id))
                 .load::<sharebill::models::TxItem>(&mut conn)?
@@ -259,7 +261,7 @@ async fn post(id: web::Path<i32>, pool: web::Data<DbPool>) -> actix_web::Result<
         move || -> Result<_, Box<dyn std::error::Error + Send + Sync + 'static>> {
             let mut conn = pool2.get().expect("couldn't get db connection from pool");
 
-            let credits = credits::table
+            let credits: Vec<(String, Rational)> = credits::table
                 .select((credits::account, credits::value))
                 .filter(credits::tx_id.eq(id))
                 .load::<sharebill::models::TxItem>(&mut conn)?
@@ -276,6 +278,9 @@ async fn post(id: web::Path<i32>, pool: web::Data<DbPool>) -> actix_web::Result<
     let credits = credits?.map_err(actix_web::error::ErrorInternalServerError)?;
     let transaction = transaction?.map_err(actix_web::error::ErrorInternalServerError)?;
 
+    let sum_debits = debits.iter().map(|d| &d.1).sum();
+    let sum_credits = credits.iter().map(|c| &c.1).sum();
+
     Ok(PostTemplate {
         id,
         what: transaction.description,
@@ -288,6 +293,8 @@ async fn post(id: web::Path<i32>, pool: web::Data<DbPool>) -> actix_web::Result<
         .to_string(),
         debits,
         credits,
+        sum_debits,
+        sum_credits,
     })
 }
 

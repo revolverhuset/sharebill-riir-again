@@ -1,3 +1,5 @@
+use std::iter::Sum;
+
 use diesel::deserialize::{self, FromSql};
 use diesel::prelude::*;
 use diesel::serialize::{self, Output, ToSql};
@@ -59,6 +61,14 @@ impl std::ops::Add for Rational {
     }
 }
 
+impl<'a> std::ops::Add<&'a Rational> for Rational {
+    type Output = Rational;
+
+    fn add(self, rhs: &'a Rational) -> Self::Output {
+        Rational(self.0 + &rhs.0)
+    }
+}
+
 impl std::ops::AddAssign for Rational {
     fn add_assign(&mut self, rhs: Self) {
         self.0 += rhs.0;
@@ -74,6 +84,13 @@ impl From<u32> for Rational {
 impl std::fmt::Display for Rational {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl<'a> Sum<&'a Rational> for Rational {
+    fn sum<I: Iterator<Item = &'a Rational>>(iter: I) -> Self {
+        iter.fold(Self::from(0u32), |sum, num| sum + num)
+        // todo!()
     }
 }
 
