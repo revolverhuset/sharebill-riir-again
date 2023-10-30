@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+
+<head>
+    <title>Post – Sharebill</title>
+    <meta charset="utf8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <base href="../">
+    <link rel="stylesheet" href="assets/all.css" type="text/css">
+</head>
+
+<body>
+    <h1>Post</h1>
+    <ul class="breadcrumbs">
+        <li><a href="">Overview</a></li>
+        <li><a href="post/{{ id }}">Post</a></li>
+    </ul>
+
+    <div class="section">
+        <form>
+            <div>
+                <dl>
+                    <dt>When</dt>
+                    <dd class="control-group"><input value="{{ when }}" data-for="timestamp"></dd>
+                    <dt>What</dt>
+                    <dd class="control-group"><input value="{{ what }}" data-for="description"></dd>
+                </dl>
+                <table class="accounts account-inputs">
+                    <thead>
+                        <tr>
+                            <th colspan="2">Debits</th>
+                        </tr>
+                        <tr>
+                            <th>Account</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for debit in debits %}
+                        <tr>
+                            <td class="debits">
+                                <span class="input-prepend control-group">
+                                    <span class="add-on"><i class="icon-user"></i></span>
+                                    <input class="input-medium account" data-for="account" value="{{ debit.0 }}">
+                                </span>
+                            </td>
+                            <td class="debits currency">
+                                <span class="currency_input control-group input-append">
+                                    <input class="input-small currency" data-for="value" value="{{ debit.1 }}">
+                                    <span class="add-on">kr</span>
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        <tr>
+                            <td class="debits">
+                                <span class="input-prepend control-group">
+                                    <span class="add-on"><i class="icon-user"></i></span>
+                                    <input class="input-medium account" data-for="account">
+                                </span>
+                            </td>
+                            <td class="debits currency">
+                                <span class="currency_input control-group input-append">
+                                    <input class="input-small currency" data-for="value">
+                                    <span class="add-on">kr</span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="total">
+                            <td class="debits">Sum</td>
+                            <td class="debits currency">1186</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class="accounts account-inputs">
+                    <thead>
+                        <tr>
+                            <th colspan="2">Credits</th>
+                        </tr>
+                        <tr>
+                            <th>Account</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for credit in credits %}
+                        <tr>
+                            <td class="credits">
+                                <span class="input-prepend control-group">
+                                    <span class="add-on"><i class="icon-user"></i></span>
+                                    <input class="input-medium account" data-for="account" value="{{ credit.0 }}">
+                                </span>
+                            </td>
+                            <td class="credits currency">
+                                <span class="currency_input control-group input-append">
+                                    <input class="input-small currency" data-for="value" value="{{ credit.1 }}">
+                                    <span class="add-on">kr</span>
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        <tr>
+                            <td class="credits">
+                                <span class="input-prepend control-group">
+                                    <span class="add-on"><i class="icon-user"></i></span>
+                                    <input class="input-medium account" data-for="account">
+                                </span>
+                            </td>
+                            <td class="credits currency">
+                                <span class="currency_input control-group input-append">
+                                    <input class="input-small currency" data-for="value">
+                                    <span class="add-on">kr</span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="total">
+                            <td class="credits">Sum</td>
+                            <td class="credits currency">1186</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div><span></span><span></span>
+            <div>
+                <button disabled class="btn btn-primary" disabled type="submit">Save</button><span> </span>
+                <button disabled class="btn" type="reset">Reset</button><span> </span>
+                <button disabled class="btn btn-danger" type="button">Delete</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="footer">
+        <ul>
+            <li>Sharebill</li>
+            <li><a href="https://github.com/revolverhuset/sharebill-riir-again/">Source code</a></li>
+            <li><a href="https://github.com/revolverhuset/sharebill-riir-again/issues">Report an issue</a></li>
+        </ul>
+    </div>
+</body>

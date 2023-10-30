@@ -41,6 +41,16 @@ struct OverviewTemplate {
     transactions: Transactions,
 }
 
+#[derive(Template)]
+#[template(path = "post.html")]
+struct PostTemplate {
+    id: i32,
+    when: String,
+    what: String,
+    debits: Vec<(String, i64)>,
+    credits: Vec<(String, i64)>,
+}
+
 async fn overview(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> {
     let pool1 = pool.clone();
     let balances = web::block(
@@ -212,6 +222,95 @@ async fn overview(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> 
     })
 }
 
+async fn post(id: web::Path<i32>, pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> {
+    let pool1 = pool.clone();
+    let pool2 = pool.clone();
+    let id = *id;
+
+    let transaction = web::block(
+        move || -> Result<_, Box<dyn std::error::Error + Send + Sync + 'static>> {
+            let mut conn = pool.get().expect("couldn't get db connection from pool");
+
+            let tx = txs::table
+                .find(id)
+                .first::<sharebill::models::Tx>(&mut conn)?;
+
+            Ok(tx)
+        },
+    );
+
+    let debits = web::block(
+        move || -> Result<_, Box<dyn std::error::Error + Send + Sync + 'static>> {
+            let mut conn = pool1.get().expect("couldn't get db connection from pool");
+
+            let debits = debits::table
+                .select((debits::account, debits::value))
+                .filter(debits::tx_id.eq(id))
+                .load::<sharebill::models::TxItem>(&mut conn)?
+                .into_iter()
+                .map(|row| {
+                    (
+                        row.account,
+                        row.value
+                            .into_inner()
+                            .round()
+                            .to_integer()
+                            .try_into()
+                            .unwrap(),
+                    )
+                })
+                .collect();
+
+            Ok(debits)
+        },
+    );
+
+    let credits = web::block(
+        move || -> Result<_, Box<dyn std::error::Error + Send + Sync + 'static>> {
+            let mut conn = pool2.get().expect("couldn't get db connection from pool");
+
+            let credits = credits::table
+                .select((credits::account, credits::value))
+                .filter(credits::tx_id.eq(id))
+                .load::<sharebill::models::TxItem>(&mut conn)?
+                .into_iter()
+                .map(|row| {
+                    (
+                        row.account,
+                        row.value
+                            .into_inner()
+                            .round()
+                            .to_integer()
+                            .try_into()
+                            .unwrap(),
+                    )
+                })
+                .collect();
+
+            Ok(credits)
+        },
+    );
+
+    let (transaction, debits, credits) = futures::future::join3(transaction, debits, credits).await;
+    let debits = debits?.map_err(actix_web::error::ErrorInternalServerError)?;
+    let credits = credits?.map_err(actix_web::error::ErrorInternalServerError)?;
+    let transaction = transaction?.map_err(actix_web::error::ErrorInternalServerError)?;
+
+    Ok(PostTemplate {
+        id,
+        what: transaction.description,
+        // when: t.to_rfc3339_opts(SecondsFormat::Millis, true),
+        when: chrono_humanize::HumanTime::from(
+            transaction
+                .tx_time
+                .signed_duration_since(chrono::Local::now().naive_local()),
+        )
+        .to_string(),
+        debits,
+        credits,
+    })
+}
+
 #[actix_web::main]
 async fn main() -> io::Result<()> {
     let pool = sharebill::create_pool("test.db").expect("Could not create DB pool");
@@ -221,6 +320,7 @@ async fn main() -> io::Result<()> {
             .service(actix_files::Files::new("/assets", "assets"))
             .app_data(web::Data::new(pool.clone()))
             .route("/", web::get().to(overview))
+            .route("/post/{id}", web::get().to(post))
     })
     .bind(("127.0.0.1", 8080))?
     .run()

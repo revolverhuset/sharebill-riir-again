@@ -1757,7 +1757,7 @@ table .span24 {
   *margin-right: .3em;
   line-height: 14px;
   vertical-align: text-top;
-  background-image: url("../img/glyphicons-halflings.sum-74b801ed8644409a1d166bbf33ac3d95.png");
+  background-image: url("glyphicons-halflings.sum-74b801ed8644409a1d166bbf33ac3d95.png");
   background-position: 14px 14px;
   background-repeat: no-repeat;
 }
@@ -1768,7 +1768,7 @@ table .span24 {
 }
 
 .icon-white {
-  background-image: url("../img/glyphicons-halflings-white.sum-9bbc6e9602998a385c2ea13df56470fd.png");
+  background-image: url("glyphicons-halflings-white.sum-9bbc6e9602998a385c2ea13df56470fd.png");
 }
 
 .icon-glass {
