@@ -47,8 +47,8 @@ struct PostTemplate {
     id: i32,
     when: String,
     what: String,
-    debits: Vec<(String, i64)>,
-    credits: Vec<(String, i64)>,
+    debits: Vec<(String, Rational)>,
+    credits: Vec<(String, Rational)>,
 }
 
 async fn overview(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> {
@@ -248,17 +248,7 @@ async fn post(id: web::Path<i32>, pool: web::Data<DbPool>) -> actix_web::Result<
                 .filter(debits::tx_id.eq(id))
                 .load::<sharebill::models::TxItem>(&mut conn)?
                 .into_iter()
-                .map(|row| {
-                    (
-                        row.account,
-                        row.value
-                            .into_inner()
-                            .round()
-                            .to_integer()
-                            .try_into()
-                            .unwrap(),
-                    )
-                })
+                .map(|row| (row.account, row.value))
                 .collect();
 
             Ok(debits)
@@ -274,17 +264,7 @@ async fn post(id: web::Path<i32>, pool: web::Data<DbPool>) -> actix_web::Result<
                 .filter(credits::tx_id.eq(id))
                 .load::<sharebill::models::TxItem>(&mut conn)?
                 .into_iter()
-                .map(|row| {
-                    (
-                        row.account,
-                        row.value
-                            .into_inner()
-                            .round()
-                            .to_integer()
-                            .try_into()
-                            .unwrap(),
-                    )
-                })
+                .map(|row| (row.account, row.value))
                 .collect();
 
             Ok(credits)
