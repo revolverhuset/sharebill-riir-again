@@ -5,6 +5,7 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use rational::{sum_rat, SumRat};
 
 pub mod models;
+pub mod parse_arg; // for doctests
 pub mod rational;
 pub mod schema;
 
