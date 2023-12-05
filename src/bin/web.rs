@@ -11,6 +11,7 @@ use diesel::{
     SqliteConnection,
 };
 use num::{BigInt, Zero};
+use serde_derive::{Deserialize, Serialize};
 use sharebill::rational::{sum_rat, Rational};
 use sharebill::schema::{credits, debits, txs};
 
@@ -227,7 +228,10 @@ async fn overview(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> 
     })
 }
 
-async fn post(id: web::Path<i32>, pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> {
+async fn get_transaction(
+    id: web::Path<i32>,
+    pool: web::Data<DbPool>,
+) -> actix_web::Result<impl Responder> {
     let pool1 = pool.clone();
     let pool2 = pool.clone();
     let id = *id;
@@ -299,6 +303,22 @@ async fn post(id: web::Path<i32>, pool: web::Data<DbPool>) -> actix_web::Result<
     })
 }
 
+#[derive(Serialize, Deserialize)]
+struct HeyDoc {
+    s: String,
+    n: i32,
+}
+
+async fn put_transaction(
+    _id: web::Path<i32>,
+    _pool: web::Data<DbPool>,
+    doc: web::Json<HeyDoc>,
+) -> actix_web::Result<impl Responder> {
+    let mut doc = doc.into_inner();
+    doc.n *= 2;
+    Ok(serde_json::to_string_pretty(&doc))
+}
+
 #[actix_web::main]
 async fn main() -> io::Result<()> {
     let pool = sharebill::create_pool("test.db").expect("Could not create DB pool");
@@ -308,7 +328,8 @@ async fn main() -> io::Result<()> {
             .service(actix_files::Files::new("/assets", "assets"))
             .app_data(web::Data::new(pool.clone()))
             .route("/", web::get().to(overview))
-            .route("/post/{id}", web::get().to(post))
+            .route("/post/{id}", web::get().to(get_transaction))
+            .route("/post/{id}", web::put().to(put_transaction))
     })
     .bind(("127.0.0.1", 8080))?
     .run()
