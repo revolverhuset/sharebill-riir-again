@@ -4,6 +4,7 @@ use std::{self};
 
 use actix_web::{web, App, HttpServer, Responder};
 use askama::{Template, *};
+use chrono::SecondsFormat;
 use diesel::{
     prelude::*,
     r2d2::{ConnectionManager, Pool},
@@ -286,13 +287,11 @@ async fn post(id: web::Path<i32>, pool: web::Data<DbPool>) -> actix_web::Result<
     Ok(PostTemplate {
         id,
         what: transaction.description,
-        // when: t.to_rfc3339_opts(SecondsFormat::Millis, true),
-        when: chrono_humanize::HumanTime::from(
-            transaction
-                .tx_time
-                .signed_duration_since(chrono::Local::now().naive_local()),
-        )
-        .to_string(),
+        when: transaction
+            .tx_time
+            .and_local_timezone(chrono::Utc)
+            .unwrap()
+            .to_rfc3339_opts(SecondsFormat::Millis, true),
         debits,
         credits,
         sum_debits,
