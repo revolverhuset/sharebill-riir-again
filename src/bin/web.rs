@@ -22,7 +22,8 @@ struct AccountBalance {
 
 struct TransactionEntry {
     id: i32,
-    when: String,
+    when_absolute: String,
+    when_relative: String,
     what: String,
     debits: Vec<Option<i64>>,
     credits: Vec<Option<i64>>,
@@ -192,11 +193,12 @@ async fn overview(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> 
                         );
                     }
 
+                    let tx_time = tx.tx_time.and_local_timezone(chrono::Utc).unwrap();
                     TransactionEntry {
                         id: tx.id,
-                        when: chrono_humanize::HumanTime::from(
-                            tx.tx_time
-                                .signed_duration_since(chrono::Local::now().naive_local()),
+                        when_absolute: tx_time.to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                        when_relative: chrono_humanize::HumanTime::from(
+                            tx_time.signed_duration_since(chrono::Utc::now()),
                         )
                         .to_string(),
                         what: tx.description.clone(),

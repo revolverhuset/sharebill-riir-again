@@ -60,8 +60,8 @@
                 <tbody>
                     {% for t in transactions.transactions %}
                     <tr>
-                        <td title="{{ t.when }}" class="date">
-                            <div>{{ t.when }}</div>
+                        <td title="{{ t.when_absolute }}" class="date">
+                            <div>{{ t.when_relative }}</div>
                         </td>
                         <td>
                             <div><a href="post/{{ t.id }}">{{ t.what }}</a></div>
