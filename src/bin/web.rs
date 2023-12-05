@@ -196,7 +196,7 @@ async fn overview(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> 
                         id: tx.id,
                         when: chrono_humanize::HumanTime::from(
                             tx.tx_time
-                                .signed_duration_since(chrono::Local::now().naive_local()),
+                                .signed_duration_since(chrono::Utc::now().naive_local()),
                         )
                         .to_string(),
                         what: tx.description.clone(),
