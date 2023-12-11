@@ -4,14 +4,14 @@ use std::{self};
 
 use actix_web::{web, App, HttpServer, Responder};
 use askama::{Template, *};
-use chrono::SecondsFormat;
+use chrono::{DateTime, SecondsFormat, Utc};
 use diesel::{
     prelude::*,
     r2d2::{ConnectionManager, Pool},
     SqliteConnection,
 };
 use num::{BigInt, Zero};
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
 use sharebill::rational::{sum_rat, Rational};
 use sharebill::schema::{credits, debits, txs};
 
@@ -303,20 +303,89 @@ async fn get_transaction(
     })
 }
 
-#[derive(Serialize, Deserialize)]
-struct HeyDoc {
-    s: String,
-    n: i32,
+struct Visitor {
+    key_field: &'static str,
+    value_field: &'static str,
 }
 
-async fn put_transaction(
+impl<'de> serde::de::Visitor<'de> for Visitor {
+    type Value = HashMap<String, String>;
+
+    fn expecting(&self, _formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        todo!()
+    }
+
+    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::MapAccess<'de>,
+    {
+        let mut keys = vec![];
+        let mut values = vec![];
+
+        while let Some((key, value)) = map.next_entry::<String, String>()? {
+            if key == self.key_field {
+                keys.push(value);
+            } else if key == self.value_field {
+                values.push(value);
+            }
+        }
+
+        Ok(keys.into_iter().zip(values).collect())
+    }
+}
+
+#[derive(Debug)]
+struct Debits(HashMap<String, String>);
+
+impl<'de> serde::Deserialize<'de> for Debits {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer
+            .deserialize_map(Visitor {
+                key_field: "debit_account",
+                value_field: "debit_value",
+            })
+            .map(Debits)
+    }
+}
+
+#[derive(Debug)]
+struct Credits(HashMap<String, String>);
+
+impl<'de> serde::Deserialize<'de> for Credits {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer
+            .deserialize_map(Visitor {
+                key_field: "credit_account",
+                value_field: "credit_value",
+            })
+            .map(Credits)
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct HeyDoc {
+    when: DateTime<Utc>,
+    what: String,
+
+    #[serde(flatten)]
+    debits: Debits,
+
+    #[serde(flatten)]
+    credits: Credits,
+}
+
+async fn post_transaction(
     _id: web::Path<i32>,
     _pool: web::Data<DbPool>,
-    doc: web::Json<HeyDoc>,
+    web::Form(doc): web::Form<HeyDoc>,
 ) -> actix_web::Result<impl Responder> {
-    let mut doc = doc.into_inner();
-    doc.n *= 2;
-    Ok(serde_json::to_string_pretty(&doc))
+    Ok(format!("Understood query as: {doc:#?}\n"))
 }
 
 #[actix_web::main]
@@ -329,7 +398,7 @@ async fn main() -> io::Result<()> {
             .app_data(web::Data::new(pool.clone()))
             .route("/", web::get().to(overview))
             .route("/post/{id}", web::get().to(get_transaction))
-            .route("/post/{id}", web::put().to(put_transaction))
+            .route("/post/{id}", web::post().to(post_transaction))
     })
     .bind(("127.0.0.1", 8080))?
     .run()
