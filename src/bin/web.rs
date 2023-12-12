@@ -303,12 +303,12 @@ async fn get_transaction(
     })
 }
 
-struct Visitor {
+struct TransactionItemsVisitor {
     key_field: &'static str,
     value_field: &'static str,
 }
 
-impl<'de> serde::de::Visitor<'de> for Visitor {
+impl<'de> serde::de::Visitor<'de> for TransactionItemsVisitor {
     type Value = HashMap<String, String>;
 
     fn expecting(&self, _formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -334,38 +334,24 @@ impl<'de> serde::de::Visitor<'de> for Visitor {
     }
 }
 
-#[derive(Debug)]
-struct Debits(HashMap<String, String>);
-
-impl<'de> serde::Deserialize<'de> for Debits {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer
-            .deserialize_map(Visitor {
-                key_field: "debit_account",
-                value_field: "debit_value",
-            })
-            .map(Debits)
-    }
+fn deserialize_debits<'de, D>(deserializer: D) -> Result<HashMap<String, String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    deserializer.deserialize_map(TransactionItemsVisitor {
+        key_field: "debit_account",
+        value_field: "debit_value",
+    })
 }
 
-#[derive(Debug)]
-struct Credits(HashMap<String, String>);
-
-impl<'de> serde::Deserialize<'de> for Credits {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer
-            .deserialize_map(Visitor {
-                key_field: "credit_account",
-                value_field: "credit_value",
-            })
-            .map(Credits)
-    }
+fn deserialize_credits<'de, D>(deserializer: D) -> Result<HashMap<String, String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    deserializer.deserialize_map(TransactionItemsVisitor {
+        key_field: "credit_account",
+        value_field: "credit_value",
+    })
 }
 
 #[derive(Debug, Deserialize)]
@@ -373,11 +359,11 @@ struct HeyDoc {
     when: DateTime<Utc>,
     what: String,
 
-    #[serde(flatten)]
-    debits: Debits,
+    #[serde(flatten, deserialize_with = "deserialize_debits")]
+    debits: HashMap<String, String>,
 
-    #[serde(flatten)]
-    credits: Credits,
+    #[serde(flatten, deserialize_with = "deserialize_credits")]
+    credits: HashMap<String, String>,
 }
 
 async fn post_transaction(
