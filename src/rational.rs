@@ -43,6 +43,10 @@ impl Rational {
     pub fn into_inner(self) -> Ratio<BigUint> {
         self.0
     }
+
+    pub fn is_zero(&self) -> bool {
+        self.0.is_zero()
+    }
 }
 
 impl std::str::FromStr for Rational {
@@ -149,6 +153,33 @@ impl FromSql<Binary, Sqlite> for Rational {
         }
 
         Ok(Rational(Ratio::new(numer, denom)))
+    }
+}
+
+pub struct RationalVisitor;
+
+impl<'de> serde::de::Visitor<'de> for RationalVisitor {
+    type Value = Rational;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "rational number")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        v.parse()
+            .map_err(|_| E::invalid_value(serde::de::Unexpected::Str(v), &self))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Rational {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(RationalVisitor)
     }
 }
 

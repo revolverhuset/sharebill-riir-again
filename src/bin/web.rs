@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::io;
 use std::{self};
 
-use actix_web::{web, App, HttpServer, Responder};
+use actix_web::web::Redirect;
+use actix_web::{web, App, HttpServer, Responder, ResponseError};
 use askama::{Template, *};
 use chrono::{DateTime, SecondsFormat, Utc};
 use diesel::{
@@ -11,9 +12,12 @@ use diesel::{
     SqliteConnection,
 };
 use num::{BigInt, Zero};
+use serde::de::Error;
 use serde_derive::Deserialize;
-use sharebill::rational::{sum_rat, Rational};
+use sharebill::models::{NewCredit, NewDebit, NewTxWithId};
+use sharebill::rational::{sum_rat, Rational, RationalVisitor};
 use sharebill::schema::{credits, debits, txs};
+use thiserror::Error;
 
 type DbPool = Pool<ConnectionManager<SqliteConnection>>;
 
@@ -309,7 +313,7 @@ struct TransactionItemsVisitor {
 }
 
 impl<'de> serde::de::Visitor<'de> for TransactionItemsVisitor {
-    type Value = HashMap<String, String>;
+    type Value = HashMap<String, Rational>;
 
     fn expecting(&self, _formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         todo!()
@@ -326,7 +330,17 @@ impl<'de> serde::de::Visitor<'de> for TransactionItemsVisitor {
             if key == self.key_field {
                 keys.push(value);
             } else if key == self.value_field {
-                values.push(value);
+                if value.is_empty() && keys.last().map(|key| key.is_empty()).unwrap_or(false) {
+                    keys.pop();
+                    // ignore this value
+                } else {
+                    values.push(value.parse().map_err(|_| {
+                        A::Error::invalid_value(
+                            serde::de::Unexpected::Str(&value),
+                            &RationalVisitor,
+                        )
+                    })?);
+                }
             }
         }
 
@@ -334,7 +348,7 @@ impl<'de> serde::de::Visitor<'de> for TransactionItemsVisitor {
     }
 }
 
-fn deserialize_debits<'de, D>(deserializer: D) -> Result<HashMap<String, String>, D::Error>
+fn deserialize_debits<'de, D>(deserializer: D) -> Result<HashMap<String, Rational>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -344,7 +358,7 @@ where
     })
 }
 
-fn deserialize_credits<'de, D>(deserializer: D) -> Result<HashMap<String, String>, D::Error>
+fn deserialize_credits<'de, D>(deserializer: D) -> Result<HashMap<String, Rational>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -355,23 +369,119 @@ where
 }
 
 #[derive(Debug, Deserialize)]
-struct HeyDoc {
+struct InsertTransaction {
     when: DateTime<Utc>,
     what: String,
 
     #[serde(flatten, deserialize_with = "deserialize_debits")]
-    debits: HashMap<String, String>,
+    debits: HashMap<String, Rational>,
 
     #[serde(flatten, deserialize_with = "deserialize_credits")]
-    credits: HashMap<String, String>,
+    credits: HashMap<String, Rational>,
+}
+
+#[derive(Error, Debug)]
+enum ValidationError {
+    #[error("no transaction, credits and debits are zero")]
+    ZeroValue,
+    #[error("missing description")]
+    MissingDescription,
+    #[error("unbalanced transaction, credits != debits")]
+    Unbalanced,
+    #[error("empty account name")]
+    EmptyAccountName,
+}
+
+impl ResponseError for ValidationError {
+    fn status_code(&self) -> actix_web::http::StatusCode {
+        actix_web::http::StatusCode::BAD_REQUEST
+    }
+}
+
+impl InsertTransaction {
+    fn validate(&self) -> Result<(), ValidationError> {
+        if self.what.is_empty() {
+            return Err(ValidationError::MissingDescription);
+        }
+
+        let sum_debits: Rational = self.debits.values().sum();
+        let sum_credits: Rational = self.credits.values().sum();
+        if sum_debits != sum_credits {
+            return Err(ValidationError::Unbalanced);
+        }
+        if sum_debits.is_zero() {
+            return Err(ValidationError::ZeroValue);
+        }
+
+        if self.credits.keys().any(|account| account.is_empty())
+            || self.debits.keys().any(|account| account.is_empty())
+        {
+            return Err(ValidationError::EmptyAccountName);
+        }
+
+        Ok(())
+    }
 }
 
 async fn post_transaction(
-    _id: web::Path<i32>,
-    _pool: web::Data<DbPool>,
-    web::Form(doc): web::Form<HeyDoc>,
+    id: web::Path<i32>,
+    pool: web::Data<DbPool>,
+    web::Form(doc): web::Form<InsertTransaction>,
 ) -> actix_web::Result<impl Responder> {
-    Ok(format!("Understood query as: {doc:#?}\n"))
+    // 1. Validate `doc`
+    doc.validate()?;
+
+    // 2. In a database transaction:
+    let mut conn = pool.get().expect("couldn't get db connection from pool");
+    conn.transaction::<_, diesel::result::Error, _>(|conn| {
+        // 2a. Delete from credits and debits where tx_id=_id, delete from txs where id=_id
+        // 2b. Insert new transaction, like in add-transaction
+
+        diesel::delete(credits::table.filter(credits::tx_id.eq(*id))).execute(conn)?;
+        diesel::delete(debits::table.filter(debits::tx_id.eq(*id))).execute(conn)?;
+        diesel::delete(txs::table.filter(txs::id.eq(*id))).execute(conn)?;
+
+        diesel::insert_into(txs::table)
+            .values(&NewTxWithId {
+                id: *id,
+                tx_time: doc.when.naive_utc(),
+                rev_time: chrono::Utc::now().naive_utc(),
+                description: &doc.what,
+            })
+            .execute(conn)?;
+
+        diesel::insert_into(credits::table)
+            .values(
+                doc.credits
+                    .iter()
+                    .map(|(account, value)| NewCredit {
+                        tx_id: *id,
+                        account,
+                        value: value.clone(),
+                    })
+                    .collect::<Vec<NewCredit>>(),
+            )
+            .execute(conn)?;
+
+        diesel::insert_into(debits::table)
+            .values(
+                doc.debits
+                    .iter()
+                    .map(|(account, value)| NewDebit {
+                        tx_id: *id,
+                        account,
+                        value: value.clone(),
+                    })
+                    .collect::<Vec<NewDebit>>(),
+            )
+            .execute(conn)?;
+
+        Ok(())
+    })
+    .map_err(actix_web::error::ErrorInternalServerError)?;
+
+    // ON SUCCESS redirect to GET of the same URL
+    Ok(Redirect::to("").see_other())
 }
 
 #[actix_web::main]

@@ -28,6 +28,15 @@ pub struct NewTx<'a> {
 }
 
 #[derive(Insertable)]
+#[diesel(table_name = txs)]
+pub struct NewTxWithId<'a> {
+    pub id: i32,
+    pub tx_time: chrono::NaiveDateTime,
+    pub rev_time: chrono::NaiveDateTime,
+    pub description: &'a str,
+}
+
+#[derive(Insertable)]
 #[diesel(table_name = credits)]
 pub struct NewCredit<'a> {
     pub tx_id: i32,

@@ -21,6 +21,7 @@ askama_actix = "0.14.0"
 actix-files = "0.6.2"
 chrono-humanize = "0.2.3"
 futures = "0.3.29"
+thiserror = "1.0.56"
 
 [dependencies.libsqlite3-sys]
 features = ["bundled"]
