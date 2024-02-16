@@ -246,7 +246,8 @@ async fn get_transaction(
 
             let tx = txs::table
                 .find(id)
-                .first::<sharebill::models::Tx>(&mut conn)?;
+                .first::<sharebill::models::Tx>(&mut conn)
+                .optional()?;
 
             Ok(tx)
         },
@@ -285,12 +286,23 @@ async fn get_transaction(
     );
 
     let (transaction, debits, credits) = futures::future::join3(transaction, debits, credits).await;
-    let debits = debits?.map_err(actix_web::error::ErrorInternalServerError)?;
-    let credits = credits?.map_err(actix_web::error::ErrorInternalServerError)?;
-    let transaction = transaction?.map_err(actix_web::error::ErrorInternalServerError)?;
+    let mut debits = debits?.map_err(actix_web::error::ErrorInternalServerError)?;
+    let mut credits = credits?.map_err(actix_web::error::ErrorInternalServerError)?;
+    let transaction = transaction?
+        .map_err(actix_web::error::ErrorInternalServerError)?
+        .unwrap_or_else(|| sharebill::models::Tx {
+            id,
+            tx_time: chrono::Utc::now().naive_utc(),
+            rev_time: chrono::Utc::now().naive_utc(),
+            description: String::new(),
+        });
 
     let sum_debits = debits.iter().map(|d| &d.1).sum();
     let sum_credits = credits.iter().map(|c| &c.1).sum();
+
+    let rows = std::cmp::max(std::cmp::max(debits.len(), credits.len()) + 3, 5);
+    debits.resize(rows, Default::default());
+    credits.resize(rows, Default::default());
 
     Ok(PostTemplate {
         id,
