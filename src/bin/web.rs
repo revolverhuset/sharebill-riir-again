@@ -435,6 +435,28 @@ impl InsertTransaction {
     }
 }
 
+async fn create_post(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> {
+    let next_id = web::block(
+        move || -> Result<_, Box<dyn std::error::Error + Send + Sync + 'static>> {
+            let mut conn = pool.get().expect("couldn't get db connection from pool");
+
+            let next_id = txs::table
+                .select(txs::id)
+                .order(txs::id.desc())
+                .first::<i32>(&mut conn)
+                .optional()?
+                .map(|x| x + 1)
+                .unwrap_or_default();
+
+            Ok(next_id)
+        },
+    )
+    .await?
+    .map_err(actix_web::error::ErrorInternalServerError)?;
+
+    Ok(Redirect::to(format!("{next_id}")).see_other())
+}
+
 async fn post_transaction(
     id: web::Path<i32>,
     pool: web::Data<DbPool>,
@@ -442,6 +464,8 @@ async fn post_transaction(
 ) -> actix_web::Result<impl Responder> {
     // 1. Validate `doc`
     doc.validate()?;
+
+    // FIXME, send blocking db-code off to a background context
 
     // 2. In a database transaction:
     let mut conn = pool.get().expect("couldn't get db connection from pool");
@@ -505,6 +529,7 @@ async fn main() -> io::Result<()> {
             .service(actix_files::Files::new("/assets", "assets"))
             .app_data(web::Data::new(pool.clone()))
             .route("/", web::get().to(overview))
+            .route("/post/", web::post().to(create_post))
             .route("/post/{id}", web::get().to(get_transaction))
             .route("/post/{id}", web::post().to(post_transaction))
     })
