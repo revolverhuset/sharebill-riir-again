@@ -18,13 +18,13 @@
     </ul>
 
     <div class="section">
-        <form>
+        <form method="POST">
             <div>
                 <dl>
                     <dt>When</dt>
-                    <dd class="control-group"><input value="{{ when }}" data-for="timestamp"></dd>
+                    <dd class="control-group"><input name="when" value="{{ when }}" data-for="timestamp"></dd>
                     <dt>What</dt>
-                    <dd class="control-group"><input value="{{ what }}" data-for="description"></dd>
+                    <dd class="control-group"><input name="what" value="{{ what }}" data-for="description"></dd>
                 </dl>
                 <table class="accounts account-inputs">
                     <thead>
@@ -42,31 +42,19 @@
                             <td class="debits">
                                 <span class="input-prepend control-group">
                                     <span class="add-on"><i class="icon-user"></i></span>
-                                    <input class="input-medium account" data-for="account" value="{{ debit.0 }}">
+                                    <input class="input-medium account" data-for="account" name="debit_account"
+                                        value="{{ debit.0 }}">
                                 </span>
                             </td>
                             <td class="debits currency">
                                 <span class="currency_input control-group input-append">
-                                    <input class="input-small currency" data-for="value" value="{{ debit.1 }}">
+                                    <input class="input-small currency" data-for="value" name="debit_value"
+                                        value="{% if !debit.1.is_zero() %}{{ debit.1 }}{% endif %}">
                                     <span class="add-on">kr</span>
                                 </span>
                             </td>
                         </tr>
                         {% endfor %}
-                        <tr>
-                            <td class="debits">
-                                <span class="input-prepend control-group">
-                                    <span class="add-on"><i class="icon-user"></i></span>
-                                    <input class="input-medium account" data-for="account">
-                                </span>
-                            </td>
-                            <td class="debits currency">
-                                <span class="currency_input control-group input-append">
-                                    <input class="input-small currency" data-for="value">
-                                    <span class="add-on">kr</span>
-                                </span>
-                            </td>
-                        </tr>
                         <tr class="total">
                             <td class="debits">Sum</td>
                             <td class="debits currency">{{ sum_debits }}</td>
@@ -89,31 +77,19 @@
                             <td class="credits">
                                 <span class="input-prepend control-group">
                                     <span class="add-on"><i class="icon-user"></i></span>
-                                    <input class="input-medium account" data-for="account" value="{{ credit.0 }}">
+                                    <input class="input-medium account" data-for="account" name="credit_account"
+                                        value="{{ credit.0 }}">
                                 </span>
                             </td>
                             <td class="credits currency">
                                 <span class="currency_input control-group input-append">
-                                    <input class="input-small currency" data-for="value" value="{{ credit.1 }}">
+                                    <input class="input-small currency" data-for="value" name="credit_value"
+                                        value="{% if !credit.1.is_zero() %}{{ credit.1 }}{% endif %}">
                                     <span class="add-on">kr</span>
                                 </span>
                             </td>
                         </tr>
                         {% endfor %}
-                        <tr>
-                            <td class="credits">
-                                <span class="input-prepend control-group">
-                                    <span class="add-on"><i class="icon-user"></i></span>
-                                    <input class="input-medium account" data-for="account">
-                                </span>
-                            </td>
-                            <td class="credits currency">
-                                <span class="currency_input control-group input-append">
-                                    <input class="input-small currency" data-for="value">
-                                    <span class="add-on">kr</span>
-                                </span>
-                            </td>
-                        </tr>
                         <tr class="total">
                             <td class="credits">Sum</td>
                             <td class="credits currency">{{ sum_credits }}</td>
@@ -122,9 +98,8 @@
                 </table>
             </div><span></span><span></span>
             <div>
-                <button disabled class="btn btn-primary" disabled type="submit">Save</button><span> </span>
-                <button disabled class="btn" type="reset">Reset</button><span> </span>
-                <button disabled class="btn btn-danger" type="button">Delete</button>
+                <button class="btn btn-primary" type="submit">Save</button><span> </span>
+                <button class="btn" type="reset">Reset</button><span> </span>
             </div>
         </form>
     </div>
