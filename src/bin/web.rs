@@ -11,6 +11,7 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
     SqliteConnection,
 };
+use id30::Id30;
 use num::{BigInt, Zero};
 use serde::de::Error;
 use serde_derive::Deserialize;
@@ -27,7 +28,7 @@ struct AccountBalance {
 }
 
 struct TransactionEntry {
-    id: i32,
+    id: Id30,
     when_absolute: String,
     when_relative: String,
     what: String,
@@ -51,7 +52,7 @@ struct OverviewTemplate {
 #[derive(Template)]
 #[template(path = "post.html")]
 struct PostTemplate {
-    id: i32,
+    id: Id30,
     when: String,
     what: String,
     debits: Vec<(String, Rational)>,
@@ -233,7 +234,7 @@ async fn overview(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> 
 }
 
 async fn get_transaction(
-    id: web::Path<i32>,
+    id: web::Path<Id30>,
     pool: web::Data<DbPool>,
 ) -> actix_web::Result<impl Responder> {
     let pool1 = pool.clone();
@@ -454,11 +455,13 @@ async fn create_post(pool: web::Data<DbPool>) -> actix_web::Result<impl Responde
     .await?
     .map_err(actix_web::error::ErrorInternalServerError)?;
 
+    let next_id = Id30::try_from(next_id).map_err(actix_web::error::ErrorInternalServerError)?;
+
     Ok(Redirect::to(format!("{next_id}")).see_other())
 }
 
 async fn post_transaction(
-    id: web::Path<i32>,
+    id: web::Path<Id30>,
     pool: web::Data<DbPool>,
     web::Form(doc): web::Form<InsertTransaction>,
 ) -> actix_web::Result<impl Responder> {

@@ -27,4 +27,8 @@ actix-files = "0.6.2"
 chrono-humanize = "0.2.3"
 futures = "0.3.29"
 thiserror = "1.0.56"
+id30 = { git = "https://github.com/maghoff/id30.git", features = [
+    "diesel",
+    "serde",
+] }
 libsqlite3-sys = { version = "0.25.2", features = ["bundled"] }
