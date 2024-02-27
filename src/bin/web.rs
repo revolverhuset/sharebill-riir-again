@@ -3,7 +3,7 @@ use std::io;
 use std::{self};
 
 use actix_web::web::Redirect;
-use actix_web::{web, App, HttpServer, Responder, ResponseError};
+use actix_web::{web, App, Either, HttpServer, Responder, ResponseError};
 use askama::{Template, *};
 use chrono::{DateTime, SecondsFormat, Utc};
 use diesel::{
@@ -11,7 +11,7 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
     SqliteConnection,
 };
-use id30::Id30;
+use id30::{Id30, Id30Parse};
 use num::{BigInt, Zero};
 use serde::de::Error;
 use serde_derive::Deserialize;
@@ -235,12 +235,18 @@ async fn overview(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> 
 }
 
 async fn get_transaction(
-    id: web::Path<Id30>,
+    id: web::Path<Id30Parse>,
     pool: web::Data<DbPool>,
-) -> actix_web::Result<impl Responder> {
+) -> actix_web::Result<Either<Redirect, impl Responder>> {
+    if !id.is_canonical {
+        return Ok(Either::Left(
+            Redirect::to(format!("{}", id.id30)).permanent(),
+        ));
+    }
+    let id = id.id30;
+
     let pool1 = pool.clone();
     let pool2 = pool.clone();
-    let id = *id;
 
     let transaction = web::block(
         move || -> Result<_, Box<dyn std::error::Error + Send + Sync + 'static>> {
@@ -306,7 +312,7 @@ async fn get_transaction(
     debits.resize(rows, Default::default());
     credits.resize(rows, Default::default());
 
-    Ok(PostTemplate {
+    Ok(Either::Right(PostTemplate {
         id,
         what: transaction.description,
         when: transaction
@@ -318,7 +324,7 @@ async fn get_transaction(
         credits,
         sum_debits,
         sum_credits,
-    })
+    }))
 }
 
 struct TransactionItemsVisitor {
@@ -449,11 +455,14 @@ async fn create_post(pool: web::Data<DbPool>) -> actix_web::Result<impl Responde
 }
 
 async fn post_transaction(
-    id: web::Path<Id30>,
+    id: web::Path<Id30Parse>,
     pool: web::Data<DbPool>,
     web::Form(doc): web::Form<InsertTransaction>,
 ) -> actix_web::Result<impl Responder> {
-    let id = *id;
+    if !id.is_canonical {
+        return Ok(Redirect::to(format!("{}", id.id30)).permanent());
+    }
+    let id = id.id30;
 
     // 1. Validate `doc`
     doc.validate()?;
