@@ -3,7 +3,7 @@ use std::io;
 use std::{self};
 
 use actix_web::web::Redirect;
-use actix_web::{web, App, HttpServer, Responder, ResponseError};
+use actix_web::{web, App, Either, HttpServer, Responder, ResponseError};
 use askama::{Template, *};
 use chrono::{DateTime, SecondsFormat, Utc};
 use diesel::{
@@ -11,10 +11,12 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
     SqliteConnection,
 };
+use id30::{Canonical, Id30, Id30Parse};
 use num::{BigInt, Zero};
 use serde::de::Error;
 use serde_derive::Deserialize;
 use sharebill::models::{NewCredit, NewDebit, NewTxWithId};
+use sharebill::new_random_tx_id;
 use sharebill::rational::{sum_rat, Rational, RationalVisitor};
 use sharebill::schema::{credits, debits, txs};
 use thiserror::Error;
@@ -27,7 +29,7 @@ struct AccountBalance {
 }
 
 struct TransactionEntry {
-    id: i32,
+    id: Id30,
     when_absolute: String,
     when_relative: String,
     what: String,
@@ -51,7 +53,7 @@ struct OverviewTemplate {
 #[derive(Template)]
 #[template(path = "post.html")]
 struct PostTemplate {
-    id: i32,
+    id: Id30,
     when: String,
     what: String,
     debits: Vec<(String, Rational)>,
@@ -233,12 +235,18 @@ async fn overview(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> 
 }
 
 async fn get_transaction(
-    id: web::Path<i32>,
+    id: web::Path<Id30Parse>,
     pool: web::Data<DbPool>,
-) -> actix_web::Result<impl Responder> {
+) -> actix_web::Result<Either<Redirect, impl Responder>> {
+    if id.canonical == Canonical::Alternate {
+        return Ok(Either::Left(
+            Redirect::to(format!("{}", id.id30)).permanent(),
+        ));
+    }
+    let id = id.id30;
+
     let pool1 = pool.clone();
     let pool2 = pool.clone();
-    let id = *id;
 
     let transaction = web::block(
         move || -> Result<_, Box<dyn std::error::Error + Send + Sync + 'static>> {
@@ -304,7 +312,7 @@ async fn get_transaction(
     debits.resize(rows, Default::default());
     credits.resize(rows, Default::default());
 
-    Ok(PostTemplate {
+    Ok(Either::Right(PostTemplate {
         id,
         what: transaction.description,
         when: transaction
@@ -316,7 +324,7 @@ async fn get_transaction(
         credits,
         sum_debits,
         sum_credits,
-    })
+    }))
 }
 
 struct TransactionItemsVisitor {
@@ -436,21 +444,10 @@ impl InsertTransaction {
 }
 
 async fn create_post(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> {
-    let next_id = web::block(
-        move || -> Result<_, Box<dyn std::error::Error + Send + Sync + 'static>> {
-            let mut conn = pool.get().expect("couldn't get db connection from pool");
-
-            let next_id = txs::table
-                .select(txs::id)
-                .order(txs::id.desc())
-                .first::<i32>(&mut conn)
-                .optional()?
-                .map(|x| x + 1)
-                .unwrap_or_default();
-
-            Ok(next_id)
-        },
-    )
+    let next_id = web::block(move || {
+        let mut conn = pool.get().expect("couldn't get db connection from pool");
+        new_random_tx_id(&mut *conn)
+    })
     .await?
     .map_err(actix_web::error::ErrorInternalServerError)?;
 
@@ -458,10 +455,15 @@ async fn create_post(pool: web::Data<DbPool>) -> actix_web::Result<impl Responde
 }
 
 async fn post_transaction(
-    id: web::Path<i32>,
+    id: web::Path<Id30Parse>,
     pool: web::Data<DbPool>,
     web::Form(doc): web::Form<InsertTransaction>,
 ) -> actix_web::Result<impl Responder> {
+    if id.canonical == Canonical::Alternate {
+        return Ok(Redirect::to(format!("{}", id.id30)).permanent());
+    }
+    let id = id.id30;
+
     // 1. Validate `doc`
     doc.validate()?;
 
@@ -473,13 +475,13 @@ async fn post_transaction(
         // 2a. Delete from credits and debits where tx_id=_id, delete from txs where id=_id
         // 2b. Insert new transaction, like in add-transaction
 
-        diesel::delete(credits::table.filter(credits::tx_id.eq(*id))).execute(conn)?;
-        diesel::delete(debits::table.filter(debits::tx_id.eq(*id))).execute(conn)?;
-        diesel::delete(txs::table.filter(txs::id.eq(*id))).execute(conn)?;
+        diesel::delete(credits::table.filter(credits::tx_id.eq(id))).execute(conn)?;
+        diesel::delete(debits::table.filter(debits::tx_id.eq(id))).execute(conn)?;
+        diesel::delete(txs::table.filter(txs::id.eq(id))).execute(conn)?;
 
         diesel::insert_into(txs::table)
             .values(&NewTxWithId {
-                id: *id,
+                id,
                 tx_time: doc.when.naive_utc(),
                 rev_time: chrono::Utc::now().naive_utc(),
                 description: &doc.what,
@@ -491,7 +493,7 @@ async fn post_transaction(
                 doc.credits
                     .iter()
                     .map(|(account, value)| NewCredit {
-                        tx_id: *id,
+                        tx_id: id,
                         account,
                         value: value.clone(),
                     })
@@ -504,7 +506,7 @@ async fn post_transaction(
                 doc.debits
                     .iter()
                     .map(|(account, value)| NewDebit {
-                        tx_id: *id,
+                        tx_id: id,
                         account,
                         value: value.clone(),
                     })

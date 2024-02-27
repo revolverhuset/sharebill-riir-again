@@ -990,6 +990,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "id30"
+version = "0.1.0"
+source = "git+https://github.com/maghoff/id30.git#033e7a69bde436e23f42b5a1e343218ddbc69e5f"
+dependencies = [
+ "diesel",
+ "rand",
+ "serde",
+]
+
+[[package]]
 name = "idna"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1612,8 +1622,10 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "futures",
+ "id30",
  "libsqlite3-sys",
  "num",
+ "rand",
  "regex",
  "serde",
  "serde_derive",

@@ -1,8 +1,9 @@
 use diesel::prelude::*;
+use id30::Id30;
 
 #[derive(Queryable)]
 pub struct Tx {
-    pub id: i32,
+    pub id: Id30,
     pub tx_time: chrono::NaiveDateTime,
     pub rev_time: chrono::NaiveDateTime,
     pub description: String,
@@ -30,7 +31,7 @@ pub struct NewTx<'a> {
 #[derive(Insertable)]
 #[diesel(table_name = txs)]
 pub struct NewTxWithId<'a> {
-    pub id: i32,
+    pub id: Id30,
     pub tx_time: chrono::NaiveDateTime,
     pub rev_time: chrono::NaiveDateTime,
     pub description: &'a str,
@@ -39,7 +40,7 @@ pub struct NewTxWithId<'a> {
 #[derive(Insertable)]
 #[diesel(table_name = credits)]
 pub struct NewCredit<'a> {
-    pub tx_id: i32,
+    pub tx_id: Id30,
     pub account: &'a str,
     pub value: Rational,
 }
@@ -47,7 +48,7 @@ pub struct NewCredit<'a> {
 #[derive(Insertable)]
 #[diesel(table_name = debits)]
 pub struct NewDebit<'a> {
-    pub tx_id: i32,
+    pub tx_id: Id30,
     pub account: &'a str,
     pub value: Rational,
 }
