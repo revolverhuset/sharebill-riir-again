@@ -2,6 +2,7 @@ use diesel::r2d2::{ConnectionManager, CustomizeConnection, Pool};
 use diesel::sql_types::*;
 use diesel::{prelude::*, SqliteConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use id30::Id30;
 use rational::{sum_rat, SumRat};
 
 pub mod models;
@@ -47,4 +48,22 @@ pub fn create_pool<S: Into<String>>(
     pool.get()?.run_pending_migrations(MIGRATIONS).unwrap();
 
     Ok(pool)
+}
+
+pub fn new_random_tx_id(conn: &mut SqliteConnection) -> Result<Id30, diesel::result::Error> {
+    use rand::{distributions::Standard, prelude::*};
+
+    for candidate in Standard.sample_iter(rand::thread_rng()) {
+        if schema::txs::table
+            .filter(schema::txs::id.eq(candidate))
+            .count()
+            .first(conn)
+            .map(|x: i64| x)?
+            == 0
+        {
+            return Ok(candidate);
+        }
+    }
+
+    unreachable!()
 }

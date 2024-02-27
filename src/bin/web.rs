@@ -16,6 +16,7 @@ use num::{BigInt, Zero};
 use serde::de::Error;
 use serde_derive::Deserialize;
 use sharebill::models::{NewCredit, NewDebit, NewTxWithId};
+use sharebill::new_random_tx_id;
 use sharebill::rational::{sum_rat, Rational, RationalVisitor};
 use sharebill::schema::{credits, debits, txs};
 use thiserror::Error;
@@ -437,25 +438,12 @@ impl InsertTransaction {
 }
 
 async fn create_post(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> {
-    let next_id = web::block(
-        move || -> Result<_, Box<dyn std::error::Error + Send + Sync + 'static>> {
-            let mut conn = pool.get().expect("couldn't get db connection from pool");
-
-            let next_id = txs::table
-                .select(txs::id)
-                .order(txs::id.desc())
-                .first::<i32>(&mut conn)
-                .optional()?
-                .map(|x| x + 1)
-                .unwrap_or_default();
-
-            Ok(next_id)
-        },
-    )
+    let next_id = web::block(move || {
+        let mut conn = pool.get().expect("couldn't get db connection from pool");
+        new_random_tx_id(&mut *conn)
+    })
     .await?
     .map_err(actix_web::error::ErrorInternalServerError)?;
-
-    let next_id = Id30::try_from(next_id).map_err(actix_web::error::ErrorInternalServerError)?;
 
     Ok(Redirect::to(format!("{next_id}")).see_other())
 }

@@ -32,3 +32,4 @@ id30 = { git = "https://github.com/maghoff/id30.git", features = [
     "serde",
 ] }
 libsqlite3-sys = { version = "0.25.2", features = ["bundled"] }
+rand = "0.8.5"
