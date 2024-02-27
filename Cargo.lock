@@ -1626,6 +1626,7 @@ dependencies = [
  "id30",
  "libsqlite3-sys",
  "num",
+ "rand",
  "regex",
  "serde",
  "serde_derive",

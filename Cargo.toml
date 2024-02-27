@@ -29,3 +29,4 @@ futures = "0.3.29"
 thiserror = "1.0.56"
 id30 = { version = "0.1.0", features = ["diesel", "serde"] }
 libsqlite3-sys = { version = "0.25.2", features = ["bundled"] }
+rand = "0.8.5"

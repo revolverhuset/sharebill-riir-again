@@ -2,7 +2,8 @@ use diesel::prelude::*;
 use diesel::result::Error;
 use num::{BigInt, Zero};
 use sharebill::{
-    models::{NewCredit, NewDebit, NewTx, Tx},
+    models::{NewCredit, NewDebit, NewTxWithId, Tx},
+    new_random_tx_id,
     parse_arg::{parse_arg, EntryType},
     rational::Rational,
 };
@@ -38,14 +39,16 @@ fn main() {
         return;
     }
 
+    let conn = &mut sharebill::establish_connection("test.db");
+
     let now = chrono::Utc::now().naive_utc();
-    let new_tx = NewTx {
+    let new_tx = NewTxWithId {
+        id: new_random_tx_id(conn).expect("Error generating transaction ID"),
         tx_time: now,
         rev_time: now,
         description: &description,
     };
 
-    let conn = &mut sharebill::establish_connection("test.db");
     conn.transaction::<_, Error, _>(|conn| {
         use sharebill::schema::{credits, debits, txs};
 
