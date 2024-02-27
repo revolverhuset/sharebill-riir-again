@@ -462,6 +462,8 @@ async fn post_transaction(
     pool: web::Data<DbPool>,
     web::Form(doc): web::Form<InsertTransaction>,
 ) -> actix_web::Result<impl Responder> {
+    let id = *id;
+
     // 1. Validate `doc`
     doc.validate()?;
 
@@ -473,13 +475,13 @@ async fn post_transaction(
         // 2a. Delete from credits and debits where tx_id=_id, delete from txs where id=_id
         // 2b. Insert new transaction, like in add-transaction
 
-        diesel::delete(credits::table.filter(credits::tx_id.eq(*id))).execute(conn)?;
-        diesel::delete(debits::table.filter(debits::tx_id.eq(*id))).execute(conn)?;
-        diesel::delete(txs::table.filter(txs::id.eq(*id))).execute(conn)?;
+        diesel::delete(credits::table.filter(credits::tx_id.eq(id))).execute(conn)?;
+        diesel::delete(debits::table.filter(debits::tx_id.eq(id))).execute(conn)?;
+        diesel::delete(txs::table.filter(txs::id.eq(id))).execute(conn)?;
 
         diesel::insert_into(txs::table)
             .values(&NewTxWithId {
-                id: *id,
+                id,
                 tx_time: doc.when.naive_utc(),
                 rev_time: chrono::Utc::now().naive_utc(),
                 description: &doc.what,
@@ -491,7 +493,7 @@ async fn post_transaction(
                 doc.credits
                     .iter()
                     .map(|(account, value)| NewCredit {
-                        tx_id: *id,
+                        tx_id: id,
                         account,
                         value: value.clone(),
                     })
@@ -504,7 +506,7 @@ async fn post_transaction(
                 doc.debits
                     .iter()
                     .map(|(account, value)| NewDebit {
-                        tx_id: *id,
+                        tx_id: id,
                         account,
                         value: value.clone(),
                     })
